@@ -39,7 +39,7 @@ def getJumpbridgeData(region):
         else:
             data = []
             url = "https://s3.amazonaws.com/vintel-resources/{region}_jb.txt"
-            resp = requests.get(url.format(region=region))
+            resp = requests.get(url.format(region=region), verify=False)
             for line in resp.iter_lines(decode_unicode=True):
                 splits = line.strip().split()
                 if len(splits) == 3:
@@ -54,7 +54,7 @@ def getJumpbridgeData(region):
 def getNewestVersion():
     try:
         url = "https://s3.amazonaws.com/vintel-resources/current-version.txt"
-        newestVersion = requests.get(url).text
+        newestVersion = requests.get(url, verify=False).text
         return newestVersion
     except Exception as e:
         logging.error("Failed version-request: %s", e)

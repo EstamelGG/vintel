@@ -1,0 +1,9 @@
+backports.functools-lru-cache==1.6.4
+beautifulsoup4==4.5.0
+bs4==0.0.1
+pyglet==1.2.4
+PyInstaller==3.1
+pywin32==228
+requests==2.11.0
+six==1.10.0
+soupsieve==1.9.6

@@ -2,6 +2,11 @@
 <p align="center">
   <img align="middle" src="src/vi/ui/res/logo.png">
 </p>
+
+# What is new
+
+Support new log format @2022
+
 # Welcome To Vintel
 
 Visual intel chat analysis, planning and notification application for [EVE Online](http://www.eveonline.com). Gathers status through in-game intelligence channels on all known hostiles and presents all the data on a [dotlan](http://evemaps.dotlan.net/map/Cache#npc24) generated regional map. The map is annotated in real-time as players report intel in monitored chat channels.
@@ -76,6 +81,10 @@ https://pypi.python.org/pypi/requests
 
 ## Building the Vintel Standalone Package
 
+ - python 2.7.10 (32bit) required
+ - pip install -r requirements.txt
+ - pip install ./pyqt4_whl/PyQt4-4.11.4-cp27-cp27m-win32.whl
+ - You can download pyqt4 from https://download.lfd.uci.edu/pythonlibs/archived/cp27/PyQt4-4.11.4-cp27-cp27m-win32.whl
  - The standalone is created using pyinstaller. All media files and the .spec-file with the configuration for pyinstaller are included in the source repo. Pyinstaller can be found here: https://github.com/pyinstaller/pyinstaller/wiki.
  - Edit the .spec file to match your src path in the "a = Analysis" section and execute "pyinstaller vintel.spec vintel.py". If everything went correctly you should get a dist folder that contains the standalone executable.
 

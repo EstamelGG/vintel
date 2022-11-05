@@ -43,6 +43,7 @@ from vi.ui.systemtray import TrayContextMenu
 from vi.chatparser import ChatParser
 from PyQt4.QtGui import QAction
 from PyQt4.QtGui import QMessageBox
+import vi.PanningWebView  # GG edit; fix for pyinstaller package
 
 # Timer intervals
 MESSAGE_EXPIRY_SECS = 20 * 60
@@ -599,7 +600,7 @@ class MainWindow(QtGui.QMainWindow):
         try:
             data = []
             if url != "":
-                resp = requests.get(url)
+                resp = requests.get(url, verify=False)
                 for line in resp.iter_lines(decode_unicode=True):
                     parts = line.strip().split()
                     if len(parts) == 3:
@@ -849,7 +850,7 @@ class RegionChooser(QtGui.QDialog):
         correct = False
         try:
             url = dotlan.Map.DOTLAN_BASIC_URL.format(text)
-            content = requests.get(url).text
+            content = requests.get(url, verify=False).text
             if u"not found" in content:
                 correct = False
                 # Fallback -> ships vintel with this map?
@@ -1018,7 +1019,7 @@ class JumpbridgeChooser(QtGui.QDialog):
         try:
             url = six.text_type(self.urlField.text())
             if url != "":
-                requests.get(url).text
+                requests.get(url, verify=False).text
             self.emit(SIGNAL("set_jumpbridge_url"), url)
             self.accept()
         except Exception as e:

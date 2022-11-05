@@ -194,7 +194,7 @@ class SoundManager(six.with_metaclass(Singleton)):
             try:
                 mp3url = 'http://api.voicerss.org/?c=WAV&key={self.VOICE_RSS_API_KEY}&src={inputText}&hl=en-us'.format(
                     **locals())
-                self.playAudioFile(requests.get(mp3url, stream=True).raw)
+                self.playAudioFile(requests.get(mp3url, stream=True, verify=False).raw)
                 time.sleep(.5)
             except requests.exceptions.RequestException as e:
                 logging.error('playTTS error: %s', str(e))
@@ -225,7 +225,7 @@ class SoundManager(six.with_metaclass(Singleton)):
                 sys.stdout.flush()
                 if len(val) > 0:
                     try:
-                        args.timeout.write(requests.get(mp3url, headers=headers).content)
+                        args.timeout.write(requests.get(mp3url, headers=headers, verify=False).content)
                         time.sleep(.5)
                     except requests.exceptions.RequestException as e:
                         logging.error('audioExtractToMp3 error: %s', e)

@@ -39,7 +39,7 @@ def charnameToId(name):
     """
     try:
         url = "https://api.eveonline.com/eve/CharacterID.xml.aspx"
-        content = requests.get(url, params={'names': name}).text
+        content = requests.get(url, params={'names': name}, verify=False).text
         soup = BeautifulSoup(content, 'html.parser')
         rowSet = soup.select("rowset")[0]
         for row in rowSet.select("row"):
@@ -51,7 +51,7 @@ def charnameToId(name):
         # fallback! if there is a problem with the API, we use evegate
         baseUrl = "https://gate.eveonline.com/Profile/"
 
-        content = requests.get("{}{}".format(baseUrl, requests.utils.quote(name))).text
+        content = requests.get("{}{}".format(baseUrl, requests.utils.quote(name)), verify=False).text
         soup = BeautifulSoup(content, 'html.parser')
         img = soup.select("#imgActiveCharacter")
         imageUrl = soup.select("#imgActiveCharacter")[0]["src"]
@@ -82,7 +82,7 @@ def namesToIds(names):
         # not in cache? asking the EVE API
         if len(apiCheckNames) > 0:
             url = "https://api.eveonline.com/eve/CharacterID.xml.aspx"
-            content = requests.get(url, params={'names': ','.join(apiCheckNames)}).text
+            content = requests.get(url, params={'names': ','.join(apiCheckNames)}, verify=False).text
             soup = BeautifulSoup(content, 'html.parser')
             rowSet = soup.select("rowset")[0]
             for row in rowSet.select("row"):
@@ -120,7 +120,7 @@ def idsToNames(ids):
         # call the EVE-Api for those entries we didn't have in the cache
         url = "https://api.eveonline.com/eve/CharacterName.xml.aspx"
         if len(apiCheckIds) > 0:
-            content = requests.get(url, params={'ids': ','.join(apiCheckIds)}).text
+            content = requests.get(url, params={'ids': ','.join(apiCheckIds)}, verify=False).text
             soup = BeautifulSoup(content, 'html.parser')
             rowSet = soup.select("rowset")[0]
             for row in rowSet.select("row"):
@@ -145,7 +145,7 @@ def getAvatarForPlayer(charname):
         charId = charnameToId(charname)
         if charId:
             imageUrl = "http://image.eveonline.com/Character/{id}_{size}.jpg"
-            avatar = requests.get(imageUrl.format(id=charId, size=32)).content
+            avatar = requests.get(imageUrl.format(id=charId, size=32), verify=False).content
     except Exception as e:
         logging.error("Exception during getAvatarForPlayer: %s", e)
         avatar = None
@@ -195,7 +195,7 @@ def getCharinfoForCharId(charId):
         try:
             charId = int(charId)
             url = "https://api.eveonline.com/eve/CharacterInfo.xml.aspx"
-            content = requests.get(url, params={'characterID': charId}).text
+            content = requests.get(url, params={'characterID': charId}, verify=False).text
             soup = BeautifulSoup(content, 'html.parser')
             cacheUntil = datetime.datetime.strptime(soup.select("cacheduntil")[0].text, "%Y-%m-%d %H:%M:%S")
             diff = cacheUntil - currentEveTime()
@@ -235,7 +235,7 @@ def getSystemStatistics():
         if jumpData is None:
             jumpData = {}
             url = "https://api.eveonline.com/map/Jumps.xml.aspx"
-            content = requests.get(url).text
+            content = requests.get(url, verify=False).text
             soup = BeautifulSoup(content, 'html.parser')
 
             for result in soup.select("result"):
@@ -255,7 +255,7 @@ def getSystemStatistics():
         if systemData is None:
             systemData = {}
             url = "https://api.eveonline.com/map/Kills.xml.aspx"
-            content = requests.get(url).text
+            content = requests.get(url, verify=False).text
             soup = BeautifulSoup(content, 'html.parser')
 
             for result in soup.select("result"):

@@ -28,7 +28,6 @@ from bs4 import BeautifulSoup
 from vi import states
 from PyQt4.QtGui import QMessageBox
 
-
 from .parser_functions import parseStatus
 from .parser_functions import parseUrls, parseShips, parseSystems
 
@@ -61,11 +60,23 @@ class ChatParser(object):
             if currentTime - fileTime < maxDiff:
                 self.addFile(fullPath)
 
-    def addFile(self, path):
+    def addFile(self, path):  # read Local chat log
         lines = None
         content = ""
         filename = os.path.basename(path)
-        roomname = filename[:-20]
+        roomname = ""
+        #if len(filename) > 20:
+        #    # roomname = str(filename[:-20])
+        #    if len(filename) > 31:
+        #        roomname = filename[:-31] # GG edited, fix for new log format
+        #    else:
+        #        roomname = filename[:-20]
+        #    if roomname.find('[') > -1:
+        #        roomname = roomname[0:roomname.find('[') - 1]
+        if "_" in filename and len(filename.split("_")) >= 4:
+            roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
+        elif "_" in filename and len(filename.split("_")) == 3:
+            roomname = filename[::-1].split("_", 2)[2][::-1]
         try:
             with open(path, "r", encoding='utf-16-le') as f:
                 content = f.read()
@@ -171,7 +182,14 @@ class ChatParser(object):
         timeStart = line.find("[") + 1
         timeEnds = line.find("]")
         timeStr = line[timeStart:timeEnds].strip()
-        timestamp = datetime.datetime.strptime(timeStr, "%Y.%m.%d %H:%M:%S")
+        timestamp = None
+        if time.strptime(timeStr, "%Y.%m.%d %H:%M:%S"):  # GG edit
+            timestamp = datetime.datetime.strptime(timeStr, "%Y.%m.%d %H:%M:%S")
+        else:
+            try:
+                timestamp = datetime.datetime.strptime(timeStr, "%Y.%m.%d %H:%M:%S")
+            except Exception as e:
+                return
 
         # Finding the username of the poster
         userEnds = line.find(">")
@@ -202,7 +220,17 @@ class ChatParser(object):
         # EvE names the file like room_20140913_200737.txt, so we don't need
         # the last 20 chars
         filename = os.path.basename(path)
-        roomname = filename[:-20]
+        roomname = ""
+        #if len(filename) > 20:
+        #    # roomname = str(filename[:-20])
+        #    if len(filename) > 31:
+        #        roomname = filename[:-31]  # GG edited, fix for new log format
+        #    else:
+        #        roomname = filename[:-20]
+        if "_" in filename and len(filename.split("_")) >= 4:
+            roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
+        elif "_" in filename and len(filename.split("_")) ==3:
+            roomname = filename[::-1].split("_", 2)[2][::-1]
         if path not in self.fileData:
             # seems eve created a new file. New Files have 12 lines header
             self.fileData[path] = {"lines": 13}

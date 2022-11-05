@@ -5,11 +5,11 @@ app_name = 'vintel'
 block_cipher = None
 
 a = Analysis(['vintel.py'],
-             pathex=['z:\\mark\\code\\vintel\\src' if sys.platform == 'win32' else '/Users/mark/code/vintel/src'],
+             pathex=['C:\\Users\\Administrator\\PycharmProjects\\vintel\\src' if sys.platform == 'win32' else '/Users/mark/code/vintel/src'],
              binaries=None,
              datas=None,
-             hiddenimports=[],
              hookspath=[],
+             hiddenimports=[],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
@@ -44,9 +44,12 @@ exe = EXE(pyz,
           a.datas,
           name=os.path.join('dist', app_name + ('.exe' if sys.platform == 'win32' else '')),
           debug=False,
+          console=False,
+          # debug=True,
+          # console=True,
           strip=False,
           icon='icon.ico',
-          console=False,
+          upx=False,
           cipher=block_cipher)
 
 # Build a .app if on OS X

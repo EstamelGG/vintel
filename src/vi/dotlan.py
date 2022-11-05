@@ -192,7 +192,7 @@ class Map(object):
 
     def _getSvgFromDotlan(self, region):
         url = self.DOTLAN_BASIC_URL.format(region)
-        content = requests.get(url).text
+        content = requests.get(url, verify=False).text
         return content
 
     def addSystemStatistics(self, statistics):

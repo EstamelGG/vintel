@@ -74,7 +74,8 @@ class AvatarFindThread(QThread):
                     diffLastCall = time.time() - lastCall
                     if diffLastCall < wait:
                         time.sleep((wait - diffLastCall) / 1000.0)
-                    avatar = evegate.getAvatarForPlayer(charname)
+                    #avatar = evegate.getAvatarForPlayer(charname)
+                    avatar = "" # will be disabled
                     lastCall = time.time()
                     if avatar:
                         cache.putAvatar(charname, avatar)

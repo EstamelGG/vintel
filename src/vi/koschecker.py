@@ -37,7 +37,7 @@ def check(parts):
     names = [name.strip() for name in parts]
 
     try:
-        kosData = requests.get(CVA_KOS_URL, params = {'c': 'json', 'type': 'multi', 'q': ','.join(names)}).json()
+        kosData = requests.get(CVA_KOS_URL, params = {'c': 'json', 'type': 'multi', 'q': ','.join(names)}, verify=False).json()
     except RequestException as e:
         kosData = None
         logging.error("Error on pilot KOS check request %s", str(e))
@@ -95,7 +95,7 @@ def check(parts):
 
         for corp in corpsToCheck:
             try:
-                kosData = requests.get(CVA_KOS_URL, params = { 'c': 'json', 'type': 'unit', 'q': corp }).json()
+                kosData = requests.get(CVA_KOS_URL, params = { 'c': 'json', 'type': 'unit', 'q': corp }, verify=False).json()
             except RequestException as e:
                 logging.error("Error on corp KOS check request: %s", str(e))
 
