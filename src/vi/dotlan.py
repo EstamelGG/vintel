@@ -26,7 +26,8 @@ import time
 import six
 import requests
 import logging
-
+import os
+requests.packages.urllib3.disable_warnings()
 from bs4 import BeautifulSoup
 from vi import states
 from vi.cache.cache import Cache
@@ -69,7 +70,6 @@ class Map(object):
         self.region = region
         cache = Cache()
         self.outdatedCacheError = None
-
         # Get map from dotlan if not in the cache
         if not svgFile:
             svg = cache.getFromCache("map_" + self.region)

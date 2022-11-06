@@ -58,26 +58,32 @@ class Application(QApplication):
 
         # Set up paths
         chatLogDirectory = ""
-        if len(sys.argv) > 1:
+        gameLogDirectory = ""
+        if len(sys.argv) > 2:
             chatLogDirectory = sys.argv[1]
+            gameLogDirectory = sys.argv[2]
 
-        if not os.path.exists(chatLogDirectory):
+        if not os.path.exists(chatLogDirectory) or not os.path.exists(gameLogDirectory):
             if sys.platform.startswith("darwin"):
                 chatLogDirectory = os.path.join(os.path.expanduser("~"), "Documents", "EVE", "logs", "Chatlogs")
+                gameLogDirectory = os.path.join(os.path.expanduser("~"), "Documents", "EVE", "logs", "Gamelogs")
                 if not os.path.exists(chatLogDirectory):
-                    chatLogDirectory = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Eve Online",
-                                          "p_drive", "User", "My Documents", "EVE", "logs", "Chatlogs")
+                    chatLogDirectory = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Eve Online", "p_drive", "User", "My Documents", "EVE", "logs", "Chatlogs")
+                    gameLogDirectory = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Eve Online", "p_drive", "User", "My Documents", "EVE", "logs", "Gamelogs")
             elif sys.platform.startswith("linux"):
                 chatLogDirectory = os.path.join(os.path.expanduser("~"), "EVE", "logs", "Chatlogs")
+                gameLogDirectory = os.path.join(os.path.expanduser("~"), "EVE", "logs", "Gamelogs")
             elif sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
                 import ctypes.wintypes
                 buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
                 ctypes.windll.shell32.SHGetFolderPathW(0, 5, 0, 0, buf)
                 documentsPath = buf.value
                 chatLogDirectory = os.path.join(documentsPath, "EVE", "logs", "Chatlogs")
-        if not os.path.exists(chatLogDirectory):
+                gameLogDirectory = os.path.join(documentsPath, "EVE", "logs", "Gamelogs")
+        if not os.path.exists(chatLogDirectory) or not os.path.exists(gameLogDirectory) :
             # None of the paths for logs exist, bailing out
             QMessageBox.critical(None, "No path to Logs", "No logs found at: " + chatLogDirectory, "Quit")
+            QMessageBox.critical(None, "No path to Logs", "No logs found at: " + gameLogDirectory, "Quit")
             sys.exit(1)
 
         # Setting local directory for cache and logging
@@ -95,7 +101,8 @@ class Application(QApplication):
         vintelCache = Cache()
         logLevel = vintelCache.getFromCache("logging_level")
         if not logLevel:
-            logLevel = logging.WARN
+            #logLevel = logging.WARN
+            logLevel = logging.INFO
         backGroundColor = vintelCache.getFromCache("background_color")
         if backGroundColor:
             self.setStyleSheet("QWidget { background-color: %s; }" % backGroundColor)
@@ -104,7 +111,7 @@ class Application(QApplication):
         self.processEvents()
 
         # Setup logging for console and rotated log files
-        formatter = logging.Formatter('%(asctime)s| %(message)s', datefmt='%m/%d %I:%M:%S')
+        formatter = logging.Formatter('%(asctime)s| (%(levelname)s) |%(message)s', datefmt='%m/%d %I:%M:%S')
         rootLogger = logging.getLogger()
         rootLogger.setLevel(level=logLevel)
 
@@ -121,6 +128,7 @@ class Application(QApplication):
         logging.critical("------------------- Vintel %s starting up -------------------", version.VERSION)
         logging.critical("")
         logging.debug("Looking for chat logs at: %s", chatLogDirectory)
+        logging.debug("Looking for game logs at: %s", gameLogDirectory)
         logging.debug("Cache maintained here: %s", cache.Cache.PATH_TO_CACHE)
         logging.debug("Writing logs to: %s", vintelLogDirectory)
 
