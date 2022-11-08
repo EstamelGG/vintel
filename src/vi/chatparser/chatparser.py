@@ -18,9 +18,11 @@
 ###########################################################################
 
 import datetime
+import logging
 import os
 import time
 import six
+import re
 if six.PY2:
     from io import open
 
@@ -39,19 +41,22 @@ class ChatParser(object):
     """ ChatParser will analyze every new line that was found inside the Chatlogs.
     """
 
-    def __init__(self, path, rooms, systems):
+    def __init__(self, path, pathToGamelogs, rooms, high_values, systems):
         """ path = the path with the logs
             rooms = the rooms to parse"""
         self.path = path  # the path with the chatlog
+        self.pathToGamelogs = pathToGamelogs  # the path with the chatlog
         self.rooms = rooms  # the rooms to watch (excl. local)
+        self.high_values = high_values
         self.systems = systems  # the known systems as dict name: system
         self.fileData = {}  # informations about the files in the directory
+        self.highValueData = {}  # informations about the files in the directory
         self.knownMessages = []  # message we allready analyzed
         self.locations = {}  # informations about the location of a char
         self.ignoredPaths = []
-        self._collectInitFileData(path)
+        self._collectInitFileData(path, pathToGamelogs)
 
-    def _collectInitFileData(self, path):
+    def _collectInitFileData(self, path, pathToGamelogs):
         currentTime = time.time()
         maxDiff = 60 * 60 * 24  # what is 1 day in seconds
         for filename in os.listdir(path):
@@ -60,38 +65,63 @@ class ChatParser(object):
             if currentTime - fileTime < maxDiff:
                 self.addFile(fullPath)
 
+        for filename in os.listdir(pathToGamelogs):
+            fullPath = os.path.join(pathToGamelogs, filename)
+            fileTime = os.path.getmtime(fullPath)
+            if currentTime - fileTime < maxDiff:
+                self.addFile(fullPath)
+
     def addFile(self, path):  # read Local chat log
         lines = None
         content = ""
         filename = os.path.basename(path)
-        roomname = ""
-        #if len(filename) > 20:
-        #    # roomname = str(filename[:-20])
-        #    if len(filename) > 31:
-        #        roomname = filename[:-31] # GG edited, fix for new log format
-        #    else:
-        #        roomname = filename[:-20]
-        #    if roomname.find('[') > -1:
-        #        roomname = roomname[0:roomname.find('[') - 1]
-        if "_" in filename and len(filename.split("_")) >= 4:
-            roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
-        elif "_" in filename and len(filename.split("_")) == 3:
-            roomname = filename[::-1].split("_", 2)[2][::-1]
-        try:
-            with open(path, "r", encoding='utf-16-le') as f:
-                content = f.read()
-        except Exception as e:
-            self.ignoredPaths.append(path)
-            QMessageBox.warning(None, "Read a log file failed!", "File: {0} - problem: {1}".format(path, six.text_type(e)), "OK")
-            return None
+        if "logs\\Chatlogs" in path:
+            roomname = ""
+            if "_" in filename and len(filename.split("_")) >= 4:
+                roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
+            elif "_" in filename and len(filename.split("_")) == 3:
+                roomname = filename[::-1].split("_", 2)[2][::-1]
+            try:
+                with open(path, "r", encoding='utf-16-le') as f:
+                    content = f.read()
+            except Exception as e:
+                self.ignoredPaths.append(path)
+                QMessageBox.warning(None, "Read a log file failed!", "File: {0} - problem: {1}".format(path, six.text_type(e)), "OK")
+                return None
 
-        lines = content.split("\n")
-        if path not in self.fileData or (roomname in LOCAL_NAMES and "charname" not in self.fileData.get(path, [])):
-            self.fileData[path] = {}
-            if roomname in LOCAL_NAMES:
+            lines = content.split("\n")
+            if path not in self.fileData or (roomname in LOCAL_NAMES and "charname" not in self.fileData.get(path, [])):
+                self.fileData[path] = {}
+                if roomname in LOCAL_NAMES:
+                    charname = None
+                    sessionStart = None
+                    # for local-chats we need more infos
+                    for line in lines:
+                        if "Listener:" in line:
+                            charname = line[line.find(":") + 1:].strip()
+                        elif "Session started:" in line:
+                            sessionStr = line[line.find(":") + 1:].strip()
+                            sessionStart = datetime.datetime.strptime(sessionStr, "%Y.%m.%d %H:%M:%S")
+                        if charname and sessionStart:
+                            self.fileData[path]["charname"] = charname
+                            self.fileData[path]["sessionstart"] = sessionStart
+                            break
+            self.fileData[path]["lines"] = len(lines)
+        elif "logs\\Gamelogs" in path:
+            try:
+                with open(path, "r", encoding='utf-8') as f:  # CCP create Gamelogs with utf-8 while chatlogs use utf-16
+                    content = f.read()
+            except Exception as e:
+                self.ignoredPaths.append(path)
+                QMessageBox.warning(None, "Read a log file failed!",
+                                    "File: {0} - problem: {1}".format(path, six.text_type(e)), "OK")
+                return None
+
+            lines = content.split("\n")
+            if path not in self.highValueData:
+                self.highValueData[path] = {}
                 charname = None
                 sessionStart = None
-                # for local-chats we need more infos
                 for line in lines:
                     if "Listener:" in line:
                         charname = line[line.find(":") + 1:].strip()
@@ -99,10 +129,10 @@ class ChatParser(object):
                         sessionStr = line[line.find(":") + 1:].strip()
                         sessionStart = datetime.datetime.strptime(sessionStr, "%Y.%m.%d %H:%M:%S")
                     if charname and sessionStart:
-                        self.fileData[path]["charname"] = charname
-                        self.fileData[path]["sessionstart"] = sessionStart
+                        self.highValueData[path]["charname"] = charname
+                        self.highValueData[path]["sessionstart"] = sessionStart
                         break
-        self.fileData[path]["lines"] = len(lines)
+            self.highValueData[path]["lines"] = len(lines)
         return lines
 
     def _lineToMessage(self, line, roomname):
@@ -215,39 +245,52 @@ class ChatParser(object):
         messages = []
         if path in self.ignoredPaths:
             return []
-        # Checking if we must do anything with the changed file.
-        # We only need those which name is in the rooms-list
-        # EvE names the file like room_20140913_200737.txt, so we don't need
-        # the last 20 chars
-        filename = os.path.basename(path)
-        roomname = ""
-        #if len(filename) > 20:
-        #    # roomname = str(filename[:-20])
-        #    if len(filename) > 31:
-        #        roomname = filename[:-31]  # GG edited, fix for new log format
-        #    else:
-        #        roomname = filename[:-20]
-        if "_" in filename and len(filename.split("_")) >= 4:
-            roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
-        elif "_" in filename and len(filename.split("_")) ==3:
-            roomname = filename[::-1].split("_", 2)[2][::-1]
-        if path not in self.fileData:
-            # seems eve created a new file. New Files have 12 lines header
-            self.fileData[path] = {"lines": 13}
-        oldLength = self.fileData[path]["lines"]
-        lines = self.addFile(path)
-        if path in self.ignoredPaths:
-            return []
-        for line in lines[oldLength - 1:]:
-            line = line.strip()
-            if len(line) > 2:
-                message = None
-                if roomname in LOCAL_NAMES:
-                    message = self._parseLocal(path, line)
-                else:
-                    message = self._lineToMessage(line, roomname)
-                if message:
-                    messages.append(message)
+        if "logs\\Chatlogs" in path:
+            # Checking if we must do anything with the changed file.
+            # We only need those which name is in the rooms-list
+            # EvE names the file like room_20140913_200737.txt, so we don't need
+            # the last 20 chars
+            filename = os.path.basename(path)
+            roomname = ""
+            if "_" in filename and len(filename.split("_")) >= 4:
+                roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
+            elif "_" in filename and len(filename.split("_")) ==3:
+                roomname = filename[::-1].split("_", 2)[2][::-1]
+            if path not in self.fileData:
+                # seems eve created a new file. New Files have 12 lines header
+                self.fileData[path] = {"lines": 13}
+            oldLength = self.fileData[path]["lines"]
+            lines = self.addFile(path)
+            if path in self.ignoredPaths:
+                return []
+            for line in lines[oldLength - 1:]:
+                line = line.strip()
+                if len(line) > 2:
+                    message = None
+                    if roomname in LOCAL_NAMES:
+                        message = self._parseLocal(path, line)
+                    else:
+                        message = self._lineToMessage(line, roomname)
+                    if message:
+                        messages.append(message)
+        elif "logs\\Gamelogs" in path:
+            if path not in self.highValueData:
+                # seems eve created a new file. New Files have 5 lines header
+                self.highValueData[path] = {"lines": 6}
+            oldLength = self.highValueData[path]["lines"]
+            lines = self.addFile(path)
+            if path in self.ignoredPaths:
+                return []
+            for line in lines[oldLength - 1:]:
+                line = line.strip()
+                if "(combat)" in line[:36]:  #  only combat log
+                    if isinstance(self.high_values,list) and len(self.high_values) > 0:
+                        if "from" or "to" in line:
+                            message = None
+                            message = re.sub(u'\<.*?\>','',line)
+                            if message:
+                                messages.append(message)
+
         return messages
 
 
