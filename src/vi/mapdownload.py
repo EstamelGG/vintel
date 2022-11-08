@@ -18,67 +18,107 @@
 ###########################################################################
 
 import requests
-import time
 
 from vi.cache.cache import Cache
 from PyQt4.QtCore import QThread
 from vi import evegate
 from six.moves import queue
-import six
-from vi.singleton import Singleton
 from PyQt4 import QtGui
 import logging
+from vi import dotlan
 
 class DownloadManage(QtGui.QDialog):
-    _downloadThread = None
     def __init__(self, parent):
         QtGui.QDialog.__init__(self, parent)
+        self.ui = parent
         self.DOTLAN_BASIC_URL = u"http://evemaps.dotlan.net/svg/{0}.svg"
         self.Regions = ["Aridia", "Black Rise", "The Bleak Lands", "Branch", "Cache", "Catch", "The Citadel",
-                    "Cloud Ring", "Cobalt Edge", "Curse", "Deklein", "Delve", "Derelik", "Detorid", "Devoid",
-                    "Domain", "Esoteria", "Essence", "Etherium Reach", "Everyshore", "Fade", "Feythabolis",
-                    "The Forge", "Fountain", "Geminate", "Genesis", "Great Wildlands", "Heimatar", "Immensea",
-                    "Impass",
-                    "Insmother", "Kador", "The Kalevala Expanse", "Khanid", "Kor-Azor", "Lonetrek", "Malpais",
-                    "Metropolis",
-                    "Molden Heath", "Oasa", "Omist", "Outer Passage", "Outer Ring", "Paragon Soul",
-                    "Period Basis",
-                    "Perrigen Falls", "Placid", "Pochven", "Providence", "Pure Blind", "Querious",
-                    "Scalding Pass",
-                    "Sinq Laison", "Solitude", "The Spire", "Stain", "Syndicate", "Tash-Murkon", "Tenal",
-                    "Tenerifis", "Tribute", "Vale of the Silent", "Venal", "Verge Vendor", "Wicked Creek"]
+                        "Cloud Ring", "Cobalt Edge", "Curse", "Deklein", "Delve", "Derelik", "Detorid", "Devoid",
+                        "Domain", "Esoteria", "Essence", "Etherium Reach", "Everyshore", "Fade", "Feythabolis",
+                        "The Forge", "Fountain", "Geminate", "Genesis", "Great Wildlands", "Heimatar", "Immensea",
+                        "Impass",
+                        "Insmother", "Kador", "The Kalevala Expanse", "Khanid", "Kor-Azor", "Lonetrek", "Malpais",
+                        "Metropolis",
+                        "Molden Heath", "Oasa", "Omist", "Outer Passage", "Outer Ring", "Paragon Soul",
+                        "Period Basis",
+                        "Perrigen Falls", "Placid", "Pochven", "Providence", "Pure Blind", "Querious",
+                        "Scalding Pass",
+                        "Sinq Laison", "Solitude", "The Spire", "Stain", "Syndicate", "Tash-Murkon", "Tenal",
+                        "Tenerifis", "Tribute", "Vale of the Silent", "Venal", "Verge Vendor", "Wicked Creek"]
         self._downloadThread = self.DownloadThread(self)
         self._downloadThread.start()
+
+    def quit(self):
+        self._downloadThread.quit()
+
     def downloadMap(self):
-        self._downloadThread.queue.empty()
         for region in self.Regions:
             self._downloadThread.queue.put((region))
-    class DownloadThread(QThread, QtGui.QDialog):
+        results = []
+        global active
+        while True:
+            if active:
+                if self._downloadThread.result_queue.qsize() > len(results):
+                    result = self._downloadThread.result_queue.get()
+                    result_succ = result.split(":")[1]
+                    self.ui.downloadMapProgressBar.setValue(100 * len(results) / len(self.Regions))
+                    if result_succ == "1":
+                        self.ui.mapdownloadtextBrowser.append(u"Downloaded Map of Region: {0}".format(result.split(":")[0]))
+                    elif result_succ == "0":
+                        self.ui.mapdownloadtextBrowser.append(u"Fail download Map of Region: {0}".format(result.split(":")[0]))
+                    QtGui.QApplication.processEvents()
+                    if len(result) > 0:
+                        results.append(result)
+                    if len(results) == len(self.Regions):
+                        break
+                else:
+                    QtGui.QApplication.processEvents()
+            else:
+                break
+
+    class DownloadThread(QThread):
         queue = None
+        active = 1
         def __init__(self, parent):
             QThread.__init__(self)
             QtGui.QDialog.__init__(self, parent)
+            self.ui = parent
             self.queue = queue.Queue()
-            self.active = True
+            self.result_queue = queue.Queue()
+            global active
+            active = 1
 
         def run(self):
-            region = self.queue.get()
-            self.download(region)
+            global active
+            while True:
+                if active:
+                    region = self.queue.get()
+                    if region is not None:
+                        self.ui.ui.mapdownloadlabel.setText(u"Downloading Map of: {0}".format(region))
+                        self.download(region)
+                else:
+                    break
+            QThread.quit(self)
+        def quit(self):
+            global active
+            active = 0
+            self.queue.put(None)
+            QThread.quit(self)
 
         def download(self, region):
             cache = Cache()
             DOTLAN_BASIC_URL = u"http://evemaps.dotlan.net/svg/{0}.svg"
-            url = DOTLAN_BASIC_URL.format(region)
             content = ""
+            region = dotlan.convertRegionName(region)
+            url = DOTLAN_BASIC_URL.format(region)
+            logging.info("Downloading svg from {0}".format(url))
             try:
-                logging.info("Download svg from {0}".format(url))
                 content = requests.get(url, verify=False).text
-                self.mapdownloadtextBrowser.append(u"Downloaded Map of Region: {0}".format(region))
+                self.result_queue.put(region + ":1")
             except:
                 logging.critical("Fail download Map of Region: {0}".format(region))
-                self.mapdownloadtextBrowser.append(u"Fail download Map of Region: {0}".format(region))
-                return False
+                self.result_queue.put(region + ":0")
+                content = None
             if content:
                 cache.putIntoCache("map_" + region, content, evegate.secondsTillDowntime() + 60 * 60)
-            time.sleep(0.1)
 

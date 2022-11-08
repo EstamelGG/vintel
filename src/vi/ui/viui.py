@@ -349,6 +349,7 @@ class MainWindow(QtGui.QMainWindow):
         # Stop the threads
         try:
             SoundManager().quit()
+            DownloadManage(self).quit()
             self.avatarFindThread.quit()
             self.avatarFindThread.wait()
             self.filewatcherThread.quit()
@@ -575,6 +576,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def showJumbridgeChooser(self):
         url = self.cache.getFromCache("jumpbridge_url")
+        if url is None:
+            url = ""
         chooser = JumpbridgeChooser(self, url)
         chooser.connect(chooser, SIGNAL("set_jumpbridge_url"), self.setJumpbridges)
         chooser.show()
@@ -783,7 +786,6 @@ class RefreshMap(QtGui.QDialog):
     def __init__(self, parent):
         QtGui.QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/RefreshMap.ui"), self)
-        self.mapdownloadlabel.setText(u"Region")
         self.connect(self.downloadMapButton, SIGNAL("clicked()"), DownloadManage(self).downloadMap)
         self.mapdownloadtextBrowser.setText(u"")
 
