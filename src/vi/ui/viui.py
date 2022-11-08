@@ -804,7 +804,7 @@ class MainWindow(QtGui.QMainWindow):
                 for vip in self.highvalues:
                     if vip in message:
                         text = "High value Target Found {0}".format(message)
-                        SoundManager().playSound("kos", text)
+                        SoundManager().playSound("request", text)
 
 
 
