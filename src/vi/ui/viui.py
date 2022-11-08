@@ -30,7 +30,7 @@ import vi.version
 import logging
 from PyQt4.QtGui import *
 from PyQt4 import QtGui, uic, QtCore
-from PyQt4.QtCore import QPoint, SIGNAL
+from PyQt4.QtCore import QPoint, SIGNAL, QThread
 from PyQt4.QtGui import QImage, QPixmap, QMessageBox, QApplication
 from PyQt4.QtWebKit import QWebPage
 from vi import amazon_s3, evegate
@@ -39,7 +39,7 @@ from vi import states
 from vi.cache.cache import Cache
 from vi.resources import resourcePath
 from vi.soundmanager import SoundManager
-from vi.mapdownload import MapDownload
+from vi.mapdownload import DownloadManage
 from vi.threads import AvatarFindThread, KOSCheckerThread, MapStatisticsThread
 from vi.ui.systemtray import TrayContextMenu
 from vi.chatparser import ChatParser
@@ -784,51 +784,8 @@ class RefreshMap(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/RefreshMap.ui"), self)
         self.mapdownloadlabel.setText(u"Region")
-        self.connect(self.downloadMapButton, SIGNAL("clicked()"), self.getAllMapToCache)
+        self.connect(self.downloadMapButton, SIGNAL("clicked()"), DownloadManage().downloadMap)
         self.mapdownloadtextBrowser.setText(u"")
-        self.Regions = ["Aridia", "Black Rise", "The Bleak Lands", "Branch", "Cache", "Catch", "The Citadel",
-                        "Cloud Ring", "Cobalt Edge", "Curse", "Deklein", "Delve", "Derelik", "Detorid", "Devoid",
-                        "Domain", "Esoteria", "Essence", "Etherium Reach", "Everyshore", "Fade", "Feythabolis",
-                        "The Forge", "Fountain", "Geminate", "Genesis", "Great Wildlands", "Heimatar", "Immensea",
-                        "Impass",
-                        "Insmother", "Kador", "The Kalevala Expanse", "Khanid", "Kor-Azor", "Lonetrek", "Malpais",
-                        "Metropolis",
-                        "Molden Heath", "Oasa", "Omist", "Outer Passage", "Outer Ring", "Paragon Soul",
-                        "Period Basis",
-                        "Perrigen Falls", "Placid", "Pochven", "Providence", "Pure Blind", "Querious",
-                        "Scalding Pass",
-                        "Sinq Laison", "Solitude", "The Spire", "Stain", "Syndicate", "Tash-Murkon", "Tenal",
-                        "Tenerifis", "Tribute", "Vale of the Silent", "Venal", "Verge Vendor", "Wicked Creek"]
-
-    def getAllMapToCache(self):
-        step = 1
-        for region in self.Regions:
-            region = region.replace(" ", "_")
-            process = 100 * step / len(self.Regions)
-            mapUpdateThread = threading.Thread(target=self.getMap, args=(region, process))
-            mapUpdateThread.start()
-            QApplication.processEvents()
-            mapUpdateThread.join()
-            step += 1
-
-    def getMap(self, region, process):
-        cache = Cache()
-        DOTLAN_BASIC_URL = u"http://evemaps.dotlan.net/svg/{0}.svg"
-        url = DOTLAN_BASIC_URL.format(region)
-        self.downloadMapProgressBar.setValue(process)
-        self.mapdownloadlabel.setText(region)
-        try:
-            logging.info("Download svg from {0}".format(url))
-            content = requests.get(url, verify=False).text
-            self.mapdownloadtextBrowser.append(u"Downloaded Map of Region: {0}".format(region))
-        except:
-            logging.critical("Fail download Map of Region: {0}".format(region))
-            self.mapdownloadtextBrowser.append(u"Fail download Map of Region: {0}".format(region))
-            return False
-        if content:
-            cache.putIntoCache("map_" + region, content, evegate.secondsTillDowntime() + 60 * 60)
-        time.sleep(0.1)
-
 
 class ChatroomsChooser(QtGui.QDialog):
     def __init__(self, parent):
