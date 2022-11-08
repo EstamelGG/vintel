@@ -56,7 +56,7 @@ CLIPBOARD_CHECK_INTERVAL_MSECS = 4 * 1000
 
 class MainWindow(QtGui.QMainWindow):
 
-    def __init__(self, pathToLogs, trayIcon, backGroundColor):
+    def __init__(self, pathToLogs, pathToGameLogs, trayIcon, backGroundColor):
 
         QtGui.QMainWindow.__init__(self)
         self.cache = Cache()
@@ -72,6 +72,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.pathToLogs = pathToLogs
+        self.pathToGameLogs = pathToGameLogs
         self.mapTimer = QtCore.QTimer(self)
         self.connect(self.mapTimer, SIGNAL("timeout()"), self.updateMapView)
         self.clipboardTimer = QtCore.QTimer(self)
@@ -80,7 +81,7 @@ class MainWindow(QtGui.QMainWindow):
         self.trayIcon.activated.connect(self.systemTrayActivated)
         self.clipboard = QtGui.QApplication.clipboard()
         self.clipboard.clear(mode=self.clipboard.Clipboard)
-        self.alarmDistance = 0
+        self.alarmDistance = 3
         self.lastStatisticsUpdate = 0
         self.chatEntries = []
         self.frameButton.setVisible(False)
@@ -105,6 +106,12 @@ class MainWindow(QtGui.QMainWindow):
             roomnames = (u"TheCitadel", u"North Provi Intel", u"North Catch Intel", "North Querious Intel")
             self.cache.putIntoCache("room_names", u",".join(roomnames), 60 * 60 * 24 * 365 * 5)
         self.roomnames = roomnames
+
+        # setup high value target
+        highvalues = self.cache.getFromCache("high_values")
+        if highvalues:
+            highvalues = highvalues.split(",")
+        self.highvalues = highvalues
 
         # Disable the sound UI if sound is not available
         if not SoundManager().soundAvailable:
@@ -208,6 +215,10 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.filewatcherThread, SIGNAL("file_change"), self.logFileChanged)
         self.filewatcherThread.start()
 
+        self.filewatcherThread1 = filewatcher.FileWatcher(self.pathToGameLogs)
+        self.connect(self.filewatcherThread1, SIGNAL("file_change"), self.logFileChanged)
+        self.filewatcherThread1.start()
+
         # self.versionCheckThread = amazon_s3.NotifyNewVersionThread()
         # self.versionCheckThread.connect(self.versionCheckThread, SIGNAL("newer_version"), self.notifyNewerVersion)
         # self.versionCheckThread.start()
@@ -252,7 +263,7 @@ class MainWindow(QtGui.QMainWindow):
         # self.setJumpbridges(self.cache.getFromCache("jumpbridge_url"))
         self.systems = self.dotlan.systems
         logging.critical("Creating chat parser")
-        self.chatparser = ChatParser(self.pathToLogs, self.roomnames, self.systems)
+        self.chatparser = ChatParser(self.pathToLogs, self.pathToGameLogs, self.roomnames, self.highvalues, self.systems)
 
         # Menus - only once
         if initialize:
@@ -292,6 +303,7 @@ class MainWindow(QtGui.QMainWindow):
         self.mapTimer.start(MAP_UPDATE_INTERVAL_MSECS)
         # Allow the file watcher to run now that all else is set up
         self.filewatcherThread.paused = False
+        self.filewatcherThread1.paused = False
         logging.critical("Map setup complete")
 
     # def eventFilter(self, obj, event):
@@ -326,7 +338,7 @@ class MainWindow(QtGui.QMainWindow):
             value = ",".join(self.knownPlayerNames)
             self.cache.putIntoCache("known_player_names", value, 60 * 60 * 24 * 30)
 
-        # Program state to cache (to read it on next startup)  # Gg edit save to cache after quit
+        # Program state to cache (to read it on next startup)  # GG edit save to cache after quit
         settings = ((None, "restoreGeometry", str(self.saveGeometry())), (None, "restoreState", str(self.saveState())),
                     ("splitter", "restoreGeometry", str(self.splitter.saveGeometry())),
                     ("splitter", "restoreState", str(self.splitter.saveState())),
@@ -354,6 +366,8 @@ class MainWindow(QtGui.QMainWindow):
             self.avatarFindThread.wait()
             self.filewatcherThread.quit()
             self.filewatcherThread.wait()
+            self.filewatcherThread1.quit()
+            self.filewatcherThread1.wait()
             self.kosRequestThread.quit()
             self.kosRequestThread.wait()
             self.versionCheckThread.quit()
@@ -568,6 +582,7 @@ class MainWindow(QtGui.QMainWindow):
     def showChatroomChooser(self):
         chooser = ChatroomsChooser(self)
         chooser.connect(chooser, SIGNAL("rooms_changed"), self.changedRoomnames)
+        chooser.connect(chooser, SIGNAL("high_value_changed"), self.changedHighValues)
         chooser.show()
 
     def showRefreshMap(self):
@@ -690,6 +705,10 @@ class MainWindow(QtGui.QMainWindow):
         self.cache.putIntoCache("room_names", u",".join(newRoomnames), 60 * 60 * 24 * 365 * 5)
         self.chatparser.rooms = newRoomnames
 
+    def changedHighValues(self, newHighValues):
+        self.cache.putIntoCache("high_values", u",".join(newHighValues), 60 * 60 * 24 * 365 * 5)
+        self.chatparser.high_values = newHighValues
+
     def showInfo(self):
         infoDialog = QtGui.QDialog(self)
         uic.loadUi(resourcePath("vi/ui/Info.ui"), infoDialog)
@@ -748,38 +767,46 @@ class MainWindow(QtGui.QMainWindow):
     def logFileChanged(self, path):
         messages = self.chatparser.fileModified(path)
         for message in messages:
-            # If players location has changed
-            if message.status == states.LOCATION:
-                self.knownPlayerNames.add(message.user)
-                self.setLocation(message.user, message.systems[0])
-            elif message.status == states.KOS_STATUS_REQUEST:
-                # Do not accept KOS requests from any but monitored intel channels
-                # as we don't want to encourage the use of xxx in those channels.
-                if not message.room in self.roomnames:
-                    text = message.message[4:]
-                    text = text.replace("  ", ",")
-                    parts = (name.strip() for name in text.split(","))
-                    self.trayIcon.setIcon(self.taskbarIconWorking)
-                    self.kosRequestThread.addRequest(parts, "xxx", False)
-            # Otherwise consider it a 'normal' chat message
-            elif message.user not in ("EVE-System", "EVE System") and message.status != states.IGNORE:
-                self.addMessageToIntelChat(message)
-                # For each system that was mentioned in the message, check for alarm distance to the current system
-                # and alarm if within alarm distance.
-                systemList = self.dotlan.systems
-                if message.systems:
-                    for system in message.systems:
-                        systemname = system.name
-                        systemList[systemname].setStatus(message.status)
-                        if message.status in (
-                                states.REQUEST, states.ALARM) and message.user not in self.knownPlayerNames:
-                            alarmDistance = self.alarmDistance if message.status == states.ALARM else 0
-                            for nSystem, data in system.getNeighbours(alarmDistance).items():
-                                distance = data["distance"]
-                                chars = nSystem.getLocatedCharacters()
-                                if len(chars) > 0 and message.user not in chars:
-                                    self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
-                self.setMapContent(self.dotlan.svg)
+            if "(combat)" not in message:
+                # If players location has changed
+                if message.status == states.LOCATION:
+                    self.knownPlayerNames.add(message.user)
+                    self.setLocation(message.user, message.systems[0])
+                elif message.status == states.KOS_STATUS_REQUEST:
+                    # Do not accept KOS requests from any but monitored intel channels
+                    # as we don't want to encourage the use of xxx in those channels.
+                    if not message.room in self.roomnames:
+                        text = message.message[4:]
+                        text = text.replace("  ", ",")
+                        parts = (name.strip() for name in text.split(","))
+                        self.trayIcon.setIcon(self.taskbarIconWorking)
+                        self.kosRequestThread.addRequest(parts, "xxx", False)
+                # Otherwise consider it a 'normal' chat message
+                elif message.user not in ("EVE-System", "EVE System") and message.status != states.IGNORE:
+                    self.addMessageToIntelChat(message)
+                    # For each system that was mentioned in the message, check for alarm distance to the current system
+                    # and alarm if within alarm distance.
+                    systemList = self.dotlan.systems
+                    if message.systems:
+                        for system in message.systems:
+                            systemname = system.name
+                            systemList[systemname].setStatus(message.status)
+                            if message.status in (
+                                    states.REQUEST, states.ALARM) and message.user not in self.knownPlayerNames:
+                                alarmDistance = self.alarmDistance if message.status == states.ALARM else 0
+                                for nSystem, data in system.getNeighbours(alarmDistance).items():
+                                    distance = data["distance"]
+                                    chars = nSystem.getLocatedCharacters()
+                                    if len(chars) > 0 and message.user not in chars:
+                                        self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
+                    self.setMapContent(self.dotlan.svg)
+            elif "(combat)" in message:
+                for vip in self.highvalues:
+                    if vip in message:
+                        text = "High value Target Found {0}".format(message)
+                        SoundManager().playSound("request", text)
+
+
 
 
 class RefreshMap(QtGui.QDialog):
@@ -798,15 +825,24 @@ class ChatroomsChooser(QtGui.QDialog):
         self.connect(self.saveButton, SIGNAL("clicked()"), self.saveClicked)
         cache = Cache()
         roomnames = cache.getFromCache("room_names")
+        high_values = cache.getFromCache("high_values")
         if not roomnames:
             roomnames = u"TheCitadel,North Provi Intel,North Catch Intel,North Querious Intel"
+        if not high_values:
+            high_values = u""
         self.roomnamesField.setPlainText(roomnames)
+        self.HighValueTextEdit.setPlainText(high_values)
 
     def saveClicked(self):
         text = six.text_type(self.roomnamesField.toPlainText())
+        high_values_text = six.text_type(self.HighValueTextEdit.toPlainText())
         rooms = [six.text_type(name.strip()) for name in text.split(",")]
+        high_values = [six.text_type(name.strip()) for name in high_values_text.split(",")]
         self.accept()
-        self.emit(SIGNAL("rooms_changed"), rooms)
+        if len(rooms) > 0:
+            self.emit(SIGNAL("rooms_changed"), rooms)
+        if len(high_values) > 0:
+            self.emit(SIGNAL("high_value_changed"), high_values)
 
     def setDefaults(self):
         self.roomnamesField.setPlainText(u"TheCitadel,North Provi Intel,North Catch Intel,North Querious Intel")
