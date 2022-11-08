@@ -135,6 +135,18 @@ class ChatParser(object):
             self.highValueData[path]["lines"] = len(lines)
         return lines
 
+    def GamelogTomessage(self,line):
+        try:
+            timeStart = line.find("[") + 1
+            timeEnds = line.find("]")
+            timeStr = line[timeStart:timeEnds].strip()
+            timestamp = datetime.datetime.strptime(timeStr, "%Y.%m.%d %H:%M:%S")
+            originalText = re.sub(u'\<.*?\>', '', line)
+            message = Message("", "", timestamp, "", "", "", originalText, "")
+        except:
+            message = None
+        if message:
+            return message
     def _lineToMessage(self, line, roomname):
         # finding the timestamp
         timeStart = line.find("[") + 1
@@ -286,8 +298,9 @@ class ChatParser(object):
                 if "(combat)" in line[:36]:  #  only combat log
                     if isinstance(self.high_values,list) and len(self.high_values) > 0:
                         if "from" or "to" in line:
-                            message = None
-                            message = re.sub(u'\<.*?\>','',line)
+                            message = self.GamelogTomessage(line)
+                            #message = None
+                            #message = re.sub(u'\<.*?\>','',line)
                             if message:
                                 messages.append(message)
 

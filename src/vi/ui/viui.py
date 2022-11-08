@@ -78,6 +78,7 @@ class MainWindow(QtGui.QMainWindow):
         self.clipboardTimer = QtCore.QTimer(self)
         self.oldClipboardContent = ""
         self.trayIcon = trayIcon
+        self.play_time = datetime.datetime(1970, 1, 1, 0, 0, 0, 0)
         self.trayIcon.activated.connect(self.systemTrayActivated)
         self.clipboard = QtGui.QApplication.clipboard()
         self.clipboard.clear(mode=self.clipboard.Clipboard)
@@ -263,7 +264,8 @@ class MainWindow(QtGui.QMainWindow):
         # self.setJumpbridges(self.cache.getFromCache("jumpbridge_url"))
         self.systems = self.dotlan.systems
         logging.critical("Creating chat parser")
-        self.chatparser = ChatParser(self.pathToLogs, self.pathToGameLogs, self.roomnames, self.highvalues, self.systems)
+        self.chatparser = ChatParser(self.pathToLogs, self.pathToGameLogs, self.roomnames, self.highvalues,
+                                     self.systems)
 
         # Menus - only once
         if initialize:
@@ -767,7 +769,7 @@ class MainWindow(QtGui.QMainWindow):
     def logFileChanged(self, path):
         messages = self.chatparser.fileModified(path)
         for message in messages:
-            if "(combat)" not in message:
+            if "(combat)" not in message.plainText:
                 # If players location has changed
                 if message.status == states.LOCATION:
                     self.knownPlayerNames.add(message.user)
@@ -800,13 +802,14 @@ class MainWindow(QtGui.QMainWindow):
                                     if len(chars) > 0 and message.user not in chars:
                                         self.trayIcon.showNotification(message, system.name, ", ".join(chars), distance)
                     self.setMapContent(self.dotlan.svg)
-            elif "(combat)" in message:
+            elif "(combat)" in message.plainText:
                 for vip in self.highvalues:
-                    if vip in message:
-                        text = "High value Target Found {0}".format(message)
-                        SoundManager().playSound("request", text)
-
-
+                    if vip in message.plainText:
+                        timestamp = message.timestamp
+                        if (timestamp - self.play_time).seconds > 10:
+                            self.play_time = timestamp
+                            text = "High value Target Found {0}".format(message)
+                            SoundManager().playSound("kos", text)
 
 
 class RefreshMap(QtGui.QDialog):
@@ -815,6 +818,7 @@ class RefreshMap(QtGui.QDialog):
         uic.loadUi(resourcePath("vi/ui/RefreshMap.ui"), self)
         self.connect(self.downloadMapButton, SIGNAL("clicked()"), DownloadManage(self).downloadMap)
         self.mapdownloadtextBrowser.setText(u"")
+
 
 class ChatroomsChooser(QtGui.QDialog):
     def __init__(self, parent):
