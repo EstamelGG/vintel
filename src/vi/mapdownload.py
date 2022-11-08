@@ -24,12 +24,15 @@ from vi.cache.cache import Cache
 from PyQt4.QtCore import QThread
 from vi import evegate
 from six.moves import queue
-
+import six
+from vi.singleton import Singleton
+from PyQt4 import QtGui
 import logging
 
-class DownloadManage():
+class DownloadManage(QtGui.QDialog):
     _downloadThread = None
-    def __init__(self):
+    def __init__(self, parent):
+        QtGui.QDialog.__init__(self, parent)
         self.DOTLAN_BASIC_URL = u"http://evemaps.dotlan.net/svg/{0}.svg"
         self.Regions = ["Aridia", "Black Rise", "The Bleak Lands", "Branch", "Cache", "Catch", "The Citadel",
                     "Cloud Ring", "Cobalt Edge", "Curse", "Deklein", "Delve", "Derelik", "Detorid", "Devoid",
@@ -44,14 +47,17 @@ class DownloadManage():
                     "Scalding Pass",
                     "Sinq Laison", "Solitude", "The Spire", "Stain", "Syndicate", "Tash-Murkon", "Tenal",
                     "Tenerifis", "Tribute", "Vale of the Silent", "Venal", "Verge Vendor", "Wicked Creek"]
-        self._downloadThread = self.DownloadThread()
+        self._downloadThread = self.DownloadThread(self)
         self._downloadThread.start()
-    def downloadMap(self, region):
-        self._downloadThread.queue.put((region))
-    class DownloadThread(QThread):
+    def downloadMap(self):
+        self._downloadThread.queue.empty()
+        for region in self.Regions:
+            self._downloadThread.queue.put((region))
+    class DownloadThread(QThread, QtGui.QDialog):
         queue = None
-        def __init__(self):
+        def __init__(self, parent):
             QThread.__init__(self)
+            QtGui.QDialog.__init__(self, parent)
             self.queue = queue.Queue()
             self.active = True
 
@@ -63,6 +69,7 @@ class DownloadManage():
             cache = Cache()
             DOTLAN_BASIC_URL = u"http://evemaps.dotlan.net/svg/{0}.svg"
             url = DOTLAN_BASIC_URL.format(region)
+            content = ""
             try:
                 logging.info("Download svg from {0}".format(url))
                 content = requests.get(url, verify=False).text

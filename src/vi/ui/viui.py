@@ -24,7 +24,7 @@ import time
 import six
 import requests
 import webbrowser
-import threading
+
 import vi.version
 
 import logging
@@ -784,7 +784,7 @@ class RefreshMap(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
         uic.loadUi(resourcePath("vi/ui/RefreshMap.ui"), self)
         self.mapdownloadlabel.setText(u"Region")
-        self.connect(self.downloadMapButton, SIGNAL("clicked()"), DownloadManage().downloadMap)
+        self.connect(self.downloadMapButton, SIGNAL("clicked()"), DownloadManage(self).downloadMap)
         self.mapdownloadtextBrowser.setText(u"")
 
 class ChatroomsChooser(QtGui.QDialog):
