@@ -7,6 +7,19 @@
 
 Support new log format @2022
 
+Setup dev env:
+
+1. Install python2.7.10 (32bit)
+2. Install pycharm community
+3. git clone and open project
+4. Set Interpreter to use python2.7(venv)
+5. Set pycharm terminal to cmd.exe
+6. Open Terminal from pycharm
+7. cd ./src
+8. pip install -r requirements.txt
+9. pip install ./pyqt4_whl/PyQt4-4.11.4-cp27-cp27m-win32.whl
+10. run vintel.py
+
 # Welcome To Vintel
 
 Visual intel chat analysis, planning and notification application for [EVE Online](http://www.eveonline.com). Gathers status through in-game intelligence channels on all known hostiles and presents all the data on a [dotlan](http://evemaps.dotlan.net/map/Cache#npc24) generated regional map. The map is annotated in real-time as players report intel in monitored chat channels.
