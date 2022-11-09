@@ -808,7 +808,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.setMapContent(self.dotlan.svg)
             elif "(combat)" in message.plainText:
                 for vip in self.highvalues:
-                    if vip in message.plainText:
+                    if len(vip) > 0 and vip in message.plainText:
                         timestamp = message.timestamp
                         if (timestamp - self.play_time).seconds > 10:
                             self.play_time = timestamp
