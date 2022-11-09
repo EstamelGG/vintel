@@ -773,7 +773,7 @@ class MainWindow(QtGui.QMainWindow):
         if self.chatparser.high_values:
             self.highvalues = self.chatparser.high_values
         for message in messages:
-            if "(combat)" not in message.plainText:
+            if "(combat)" not in message.plainText and len(message.plainText) > 0:
                 # If players location has changed
                 if message.status == states.LOCATION:
                     self.knownPlayerNames.add(message.user)
@@ -808,7 +808,7 @@ class MainWindow(QtGui.QMainWindow):
                     self.setMapContent(self.dotlan.svg)
             elif "(combat)" in message.plainText:
                 for vip in self.highvalues:
-                    if vip in message.plainText:
+                    if len(vip) > 0 and vip in message.plainText:
                         timestamp = message.timestamp
                         if (timestamp - self.play_time).seconds > 10:
                             self.play_time = timestamp

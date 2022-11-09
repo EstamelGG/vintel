@@ -141,7 +141,10 @@ class ChatParser(object):
             timeEnds = line.find("]")
             timeStr = line[timeStart:timeEnds].strip()
             timestamp = datetime.datetime.strptime(timeStr, "%Y.%m.%d %H:%M:%S")
-            originalText = re.sub(u'\<.*?\>', '', line)
+            try:
+                originalText = re.sub(u'\<.*?\>', '', line)[::-1].split(" - ", 2)[2][::-1]
+            except:
+                originalText = ""
             message = Message("", "", timestamp, "", "", "", originalText, "")
         except:
             message = None
