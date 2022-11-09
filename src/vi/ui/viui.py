@@ -773,7 +773,7 @@ class MainWindow(QtGui.QMainWindow):
         if self.chatparser.high_values:
             self.highvalues = self.chatparser.high_values
         for message in messages:
-            if "(combat)" not in message.plainText and len(message.plainText) > 0:
+            if "(combat)" not in message.plainText:
                 # If players location has changed
                 if message.status == states.LOCATION:
                     self.knownPlayerNames.add(message.user)
