@@ -768,6 +768,10 @@ class MainWindow(QtGui.QMainWindow):
 
     def logFileChanged(self, path):
         messages = self.chatparser.fileModified(path)
+        if self.chatparser.rooms:
+            self.roomnames = self.chatparser.rooms
+        if self.chatparser.high_values:
+            self.highvalues = self.chatparser.high_values
         for message in messages:
             if "(combat)" not in message.plainText:
                 # If players location has changed
