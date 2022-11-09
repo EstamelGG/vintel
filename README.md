@@ -5,7 +5,9 @@
 
 # What is new
 
-Support new log format @2022
+Support new log format @2022.
+
+Set High Value target like "Dark Blood" in "chatroom" option will alert you when highvalue target spawn in ratting.
 
 Setup dev env:
 
