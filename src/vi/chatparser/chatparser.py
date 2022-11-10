@@ -300,11 +300,12 @@ class ChatParser(object):
                 for line in lines[oldLength - 1:]:
                     line = line.strip()
                     if "(combat)" in line[:36]:  #  only combat log
-                        if isinstance(self.high_values,list) and len(self.high_values) > 0:
-                            if "from" or "to" in line:
-                                message = self.GamelogTomessage(line)
-                                if message:
-                                    messages.append(message)
+                        if self.high_values:
+                            if len(self.high_values) > 0:
+                                if " from " or " to " in line:
+                                    message = self.GamelogTomessage(line)
+                                    if len(message.plainText) > 0:
+                                        messages.append(message)
 
         return messages
 

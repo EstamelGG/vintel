@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 import sys
 
-app_name = 'vintel-1.2.7.3'
+app_name = 'vintel-1.2.7.4'
 block_cipher = None
 
 a = Analysis(['vintel.py'],
