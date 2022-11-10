@@ -296,16 +296,15 @@ class ChatParser(object):
             lines = self.addFile(path)
             if path in self.ignoredPaths:
                 return []
-            for line in lines[oldLength - 1:]:
-                line = line.strip()
-                if "(combat)" in line[:36]:  #  only combat log
-                    if isinstance(self.high_values,list) and len(self.high_values) > 0:
-                        if "from" or "to" in line:
-                            message = self.GamelogTomessage(line)
-                            #message = None
-                            #message = re.sub(u'\<.*?\>','',line)
-                            if message:
-                                messages.append(message)
+            if len(lines) - oldLength > 20:  #  don't always process new lines
+                for line in lines[oldLength - 1:]:
+                    line = line.strip()
+                    if "(combat)" in line[:36]:  #  only combat log
+                        if isinstance(self.high_values,list) and len(self.high_values) > 0:
+                            if "from" or "to" in line:
+                                message = self.GamelogTomessage(line)
+                                if message:
+                                    messages.append(message)
 
         return messages
 
