@@ -55,6 +55,7 @@ class ChatParser(object):
         self.locations = {}  # informations about the location of a char
         self.ignoredPaths = []
         self._collectInitFileData(path, pathToGamelogs)
+        self.record_time = datetime.datetime(1970, 1, 1, 0, 0, 0, 0)
 
     def _collectInitFileData(self, path, pathToGamelogs):
         currentTime = time.time()
@@ -300,12 +301,14 @@ class ChatParser(object):
                 for line in lines[oldLength - 1:]:
                     line = line.strip()
                     if "(combat)" in line[:36]:  #  only combat log
-                        if isinstance(self.high_values,list) and len(self.high_values) > 0:
-                            if "from" or "to" in line:
-                                message = self.GamelogTomessage(line)
-                                if message:
-                                    messages.append(message)
-
+                        if self.high_values:
+                            if len(self.high_values) > 0:
+                                if " from " or " to " in line:
+                                    message = self.GamelogTomessage(line)
+                                    timestamp = message.timestamp
+                                    if len(message.plainText) > 0 and (timestamp - self.record_time).seconds > 10:
+                                        self.record_time = timestamp
+                                        messages.append(message)
         return messages
 
 
