@@ -23,6 +23,7 @@ import os
 import time
 import six
 import re
+
 if six.PY2:
     from io import open
 
@@ -87,7 +88,8 @@ class ChatParser(object):
                     content = f.read()
             except Exception as e:
                 self.ignoredPaths.append(path)
-                QMessageBox.warning(None, "Read a log file failed!", "File: {0} - problem: {1}".format(path, six.text_type(e)), "OK")
+                QMessageBox.warning(None, "Read a log file failed!",
+                                    "File: {0} - problem: {1}".format(path, six.text_type(e)), "OK")
                 return None
 
             lines = content.split("\n")
@@ -136,14 +138,14 @@ class ChatParser(object):
             self.highValueData[path]["lines"] = len(lines)
         return lines
 
-    def GamelogTomessage(self,line):
+    def GamelogTomessage(self, line):
         try:
             timeStart = line.find("[") + 1
             timeEnds = line.find("]")
             timeStr = line[timeStart:timeEnds].strip()
             timestamp = datetime.datetime.strptime(timeStr, "%Y.%m.%d %H:%M:%S")
             try:
-                originalText = re.sub(u'\<.*?\>', '', line)[::-1].split(" - ", 2)[2][::-1]
+                originalText = line
             except:
                 originalText = ""
             message = Message("", "", timestamp, "", "", "", originalText, "")
@@ -151,6 +153,7 @@ class ChatParser(object):
             message = None
         if message:
             return message
+
     def _lineToMessage(self, line, roomname):
         # finding the timestamp
         timeStart = line.find("[") + 1
@@ -176,12 +179,12 @@ class ChatParser(object):
         if upperText.startswith("XXX "):
             return Message(roomname, text, timestamp, username, systems, upperText, status=states.KOS_STATUS_REQUEST)
         elif roomname.startswith("="):
-            return Message(roomname, "xxx " + text, timestamp, username, systems, "XXX " + upperText, status=states.KOS_STATUS_REQUEST)
+            return Message(roomname, "xxx " + text, timestamp, username, systems, "XXX " + upperText,
+                           status=states.KOS_STATUS_REQUEST)
         elif upperText.startswith("VINTELSOUND_TEST"):
             return Message(roomname, text, timestamp, username, systems, upperText, status=states.SOUND_TEST)
         if roomname not in self.rooms:
             return None
-
 
         message = Message(roomname, "", timestamp, username, systems, text, originalText)
         # May happen if someone plays > 1 account
@@ -201,7 +204,8 @@ class ChatParser(object):
         # If message says clear and no system? Maybe an answer to a request?
         if status == states.CLEAR and not systems:
             maxSearch = 2  # we search only max_search messages in the room
-            for count, oldMessage in enumerate(oldMessage for oldMessage in self.knownMessages[-1::-1] if oldMessage.room == roomname):
+            for count, oldMessage in enumerate(
+                    oldMessage for oldMessage in self.knownMessages[-1::-1] if oldMessage.room == roomname):
                 if oldMessage.systems and oldMessage.status == states.REQUEST:
                     for system in oldMessage.systems:
                         systems.add(system)
@@ -270,7 +274,7 @@ class ChatParser(object):
             roomname = ""
             if "_" in filename and len(filename.split("_")) >= 4:
                 roomname = filename[::-1].split("_", 3)[3][::-1]  # GG edit, find roomname
-            elif "_" in filename and len(filename.split("_")) ==3:
+            elif "_" in filename and len(filename.split("_")) == 3:
                 roomname = filename[::-1].split("_", 2)[2][::-1]
             if path not in self.fileData:
                 # seems eve created a new file. New Files have 12 lines header
@@ -297,15 +301,29 @@ class ChatParser(object):
             lines = self.addFile(path)
             if path in self.ignoredPaths:
                 return []
-            if len(lines) - oldLength > 20:  #  don't always process new lines
+            if len(lines) > oldLength:
                 for line in lines[oldLength - 1:]:
                     line = line.strip()
-                    if "(combat)" in line[:36]:  #  only combat log
-                        if isinstance(self.high_values,list) and len(self.high_values) > 0:
-                            if "from" or "to" in line:
-                                message = self.GamelogTomessage(line)
-                                if message:
-                                    messages.append(message)
+                    if "(combat)" in line[:36]:  # only combat log
+                        if self.high_values:
+                            if len(self.high_values) > 0:
+                                if "from" or "to" in line:
+                                    try:
+                                        if ">from<" in line and ">to<" not in line:
+                                            line = re.sub(u'\<.*?\>', '', line).split(" - ")[0]
+                                        elif ">to<" in line and ">from<" not in line:
+                                            line = re.sub(u'\<.*?\>', '', line)[::-1].split(" - ", 2)[2][::-1]
+                                        else:
+                                            pass
+                                        if " from " or " to " in line:
+                                            message = self.GamelogTomessage(line)
+                                            timestamp = message.timestamp
+                                            if message and (
+                                                    timestamp - self.record_time).seconds > 10:  # don't always process new lines
+                                                messages.append(message)
+                                                self.record_time = timestamp
+                                    except:
+                                        pass
 
         return messages
 

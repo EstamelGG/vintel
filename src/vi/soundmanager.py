@@ -168,11 +168,17 @@ class SoundManager(six.with_metaclass(Singleton)):
         def playAudioFile(self, filename, stream=False):
             try:
                 volume = float(self.volume) / 100.0
+                self.player = media.Player()
                 if self.player:
                     src = media.load(filename, streaming=stream)
                     self.player.queue(src)
                     self.player.volume = volume
                     self.player.play()
+                    if "redalert" in filename:
+                        time.sleep(1.5)
+                    elif "transport" in filename:
+                        time.sleep(3)
+                    self.player.delete()
                 elif self.isDarwin:
                     subprocess.call(["afplay -v {0} {1}".format(volume, filename)], shell=True)
             except Exception as e:
