@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>343</width>
-    <height>300</height>
+    <height>325</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -26,16 +26,7 @@
    <bool>false</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
+   <property name="margin">
     <number>0</number>
    </property>
    <property name="spacing">
@@ -59,16 +50,7 @@
         </size>
        </property>
        <layout class="QGridLayout" name="gridLayout_2">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
+        <property name="margin">
          <number>0</number>
         </property>
         <property name="spacing">
@@ -79,16 +61,7 @@
           <property name="spacing">
            <number>5</number>
           </property>
-          <property name="leftMargin">
-           <number>5</number>
-          </property>
-          <property name="topMargin">
-           <number>5</number>
-          </property>
-          <property name="rightMargin">
-           <number>5</number>
-          </property>
-          <property name="bottomMargin">
+          <property name="margin">
            <number>5</number>
           </property>
           <item>
@@ -132,6 +105,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="unSetCharButton">
+              <property name="text">
+               <string>unSet Char</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -150,6 +130,13 @@
              <widget class="QPushButton" name="clearButton">
               <property name="text">
                <string>Set clear</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string/>
               </property>
              </widget>
             </item>

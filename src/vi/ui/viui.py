@@ -531,11 +531,16 @@ class MainWindow(QtGui.QMainWindow):
         sc.connect(self, SIGNAL("chat_message_added"), sc.addChatEntry)
         sc.connect(self, SIGNAL("avatar_loaded"), sc.newAvatarAvailable)
         sc.connect(sc, SIGNAL("location_set"), self.setLocation)
+        sc.connect(sc, SIGNAL("location_unset"), self.unsetLocation)
         sc.show()
 
     def markSystemOnMap(self, systemname):
         self.systems[six.text_type(systemname)].mark()
         self.updateMapView()
+
+    def unsetLocation(self, char):
+        for system in self.systems.values():
+            system.removeLocatedCharacter(char)
 
     def setLocation(self, char, newSystem):
         for system in self.systems.values():
@@ -947,6 +952,7 @@ class SystemChat(QtGui.QDialog):
         self.connect(self.alarmButton, SIGNAL("clicked()"), self.setSystemAlarm)
         self.connect(self.clearButton, SIGNAL("clicked()"), self.setSystemClear)
         self.connect(self.locationButton, SIGNAL("clicked()"), self.locationSet)
+        self.connect(self.unSetCharButton, SIGNAL("clicked()"), self.unSetChar)
 
     def _addMessageToChat(self, message, avatarPixmap):
         scrollToBottom = False
@@ -973,6 +979,10 @@ class SystemChat(QtGui.QDialog):
     def locationSet(self):
         char = six.text_type(self.playerNamesBox.currentText())
         self.emit(SIGNAL("location_set"), char, self.system.name)
+
+    def unSetChar(self):
+        char = six.text_type(self.playerNamesBox.currentText())
+        self.emit(SIGNAL("location_unset"), char)
 
     def newAvatarAvailable(self, charname, avatarData):
         for entry in self.chatEntries:
