@@ -27,6 +27,7 @@ import six
 import requests
 import logging
 import os
+
 requests.packages.urllib3.disable_warnings()
 from bs4 import BeautifulSoup
 from vi import states
@@ -72,12 +73,14 @@ class Map(object):
         self.outdatedCacheError = None
         # Get map from dotlan if not in the cache
         if not svgFile:
+            logging.info("get cache from cachefile map_{0}".format(self.region))
             svg = cache.getFromCache("map_" + self.region)
         else:
             svg = svgFile
         if not svg:
             try:
                 svg = self._getSvgFromDotlan(self.region)
+                logging.info("put map cache into cachefile map_{0}".format(self.region))
                 cache.putIntoCache("map_" + self.region, svg, evegate.secondsTillDowntime() + 60 * 60)
             except Exception as e:
                 self.outdatedCacheError = e
@@ -192,6 +195,7 @@ class Map(object):
 
     def _getSvgFromDotlan(self, region):
         url = self.DOTLAN_BASIC_URL.format(region)
+        logging.info("Downloading svg from {0}".format(self.DOTLAN_BASIC_URL.format(region)))
         content = requests.get(url, verify=False).text
         return content
 
@@ -205,7 +209,6 @@ class Map(object):
             for system in self.systemsById.values():
                 system.setStatistics(None)
         logging.info("addSystemStatistics complete")
-
 
     def setJumpbridges(self, jumpbridgesData):
         """
@@ -330,7 +333,8 @@ class System(object):
         x = coords["x"] - 3 + offsetPoint[0]
         y = coords["y"] + offsetPoint[1]
         style = "fill:{0};stroke:{0};stroke-width:2;fill-opacity:0.4"
-        tag = self.mapSoup.new_tag("rect", x=x, y=y, width=coords["width"] + 1.5, height=coords["height"], id=idName, style=style.format(color), visibility="hidden")
+        tag = self.mapSoup.new_tag("rect", x=x, y=y, width=coords["width"] + 1.5, height=coords["height"], id=idName,
+                                   style=style.format(color), visibility="hidden")
         tag["class"] = ["jumpbridge", ]
         jumps = self.mapSoup.select("#jumps")[0]
         jumps.insert(0, tag)
@@ -352,8 +356,8 @@ class System(object):
         if not wasLocated:
             coords = self.mapCoordinates
             newTag = self.mapSoup.new_tag("ellipse", cx=coords["center_x"] - 2.5, cy=coords["center_y"], id=idName,
-                    rx=coords["width"] / 2 + 4, ry=coords["height"] / 2 + 4, style="fill:#8b008d",
-                    transform=self.transform)
+                                          rx=coords["width"] / 2 + 4, ry=coords["height"] / 2 + 4, style="fill:#8b008d",
+                                          transform=self.transform)
             jumps = self.mapSoup.select("#jumps")[0]
             jumps.insert(0, newTag)
 

@@ -177,14 +177,12 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.showChatAvatarsAction, SIGNAL("triggered()"), self.changeShowAvatars)
         self.connect(self.alwaysOnTopAction, SIGNAL("triggered()"), self.changeAlwaysOnTop)
         self.connect(self.chooseChatRoomsAction, SIGNAL("triggered()"), self.showChatroomChooser)
-        self.connect(self.catchRegionAction, SIGNAL("triggered()"),
-                     lambda: self.handleRegionMenuItemSelected(self.catchRegionAction))
-        self.connect(self.providenceRegionAction, SIGNAL("triggered()"),
-                     lambda: self.handleRegionMenuItemSelected(self.providenceRegionAction))
+        self.connect(self.delveRegionAction, SIGNAL("triggered()"),
+                     lambda: self.handleRegionMenuItemSelected(self.delveRegionAction))
+        self.connect(self.fountainRegionAction, SIGNAL("triggered()"),
+                     lambda: self.handleRegionMenuItemSelected(self.fountainRegionAction))
         self.connect(self.queriousRegionAction, SIGNAL("triggered()"),
                      lambda: self.handleRegionMenuItemSelected(self.queriousRegionAction))
-        self.connect(self.providenceCatchRegionAction, SIGNAL("triggered()"),
-                     lambda: self.handleRegionMenuItemSelected(self.providenceCatchRegionAction))
         self.connect(self.providenceCatchCompactRegionAction, SIGNAL("triggered()"),
                      lambda: self.handleRegionMenuItemSelected(self.providenceCatchCompactRegionAction))
         self.connect(self.chooseRegionAction, SIGNAL("triggered()"), self.showRegionChooser)
@@ -232,18 +230,19 @@ class MainWindow(QtGui.QMainWindow):
     def setupMap(self, initialize=False):
         self.mapTimer.stop()
         self.filewatcherThread.paused = True
-
-        logging.info("Finding map file")
         regionName = self.cache.getFromCache("region_name")
+        useLocalMap = self.cache.getFromCache("ifUseMapCache")
         if not regionName:
-            regionName = "Providence"
+            regionName = "Delve"
         svg = None
-        try:
-            with open(resourcePath("vi/ui/res/mapdata/{0}.svg".format(regionName))) as svgFile:
-                svg = svgFile.read()
-        except Exception as e:
-            pass
-
+        if useLocalMap:
+            try:
+                logging.info("Finding map file")
+                with open(resourcePath("mapSVG/map_{0}.svg".format(regionName))) as svgFile:
+                    svg = svgFile.read()
+                    logging.info("read map file from \"mapSVG/map_{0}.svg\"".format(regionName))
+            except Exception as e:
+                pass
         try:
             self.dotlan = dotlan.Map(regionName, svg)
         except dotlan.DotlanException as e:
@@ -284,13 +283,11 @@ class MainWindow(QtGui.QMainWindow):
 
             # Also set up our app menus
             if not regionName:
-                self.providenceCatchRegionAction.setChecked(True)
-            elif regionName.startswith("Providencecatch"):
-                self.providenceCatchRegionAction.setChecked(True)
-            elif regionName.startswith("Catch"):
-                self.catchRegionAction.setChecked(True)
-            elif regionName.startswith("Providence"):
-                self.providenceRegionAction.setChecked(True)
+                self.delveRegionAction.setChecked(True)
+            elif regionName.startswith("Delve"):
+                self.delveRegionAction.setChecked(True)
+            elif regionName.startswith("Fountain"):
+                self.fountainRegionAction.setChecked(True)
             elif regionName.startswith("Querious"):
                 self.queriousRegionAction.setChecked(True)
             else:
@@ -621,10 +618,9 @@ class MainWindow(QtGui.QMainWindow):
             QMessageBox.warning(None, "Loading jumpbridges failed!", "Error: {0}".format(six.text_type(e)), "OK")
 
     def handleRegionMenuItemSelected(self, menuAction=None):
-        self.catchRegionAction.setChecked(False)
-        self.providenceRegionAction.setChecked(False)
+        self.delveRegionAction.setChecked(False)
+        self.fountainRegionAction.setChecked(False)
         self.queriousRegionAction.setChecked(False)
-        self.providenceCatchRegionAction.setChecked(False)
         self.providenceCatchCompactRegionAction.setChecked(False)
         self.chooseRegionAction.setChecked(False)
         if menuAction:
@@ -862,11 +858,24 @@ class RegionChooser(QtGui.QDialog):
         uic.loadUi(resourcePath("vi/ui/RegionChooser.ui"), self)
         self.connect(self.cancelButton, SIGNAL("clicked()"), self.accept)
         self.connect(self.saveButton, SIGNAL("clicked()"), self.saveClicked)
+        self.connect(self.cacheButton, SIGNAL("clicked()"), self.useCacheClicked)
         cache = Cache()
         regionName = cache.getFromCache("region_name")
+        ifUseCache = cache.getFromCache("ifUseMapCache")
+        self.ifUseCache = ifUseCache
+        if self.ifUseCache:
+            self.cacheButton.setChecked(True)
+        else:
+            self.cacheButton.setChecked(False)
         if not regionName:
-            regionName = u"Providence"
+            regionName = u"Delve"
         self.regionNameField.setPlainText(regionName)
+
+    def useCacheClicked(self):
+        if self.cacheButton.isChecked():
+            self.ifUseCache = True
+        else:
+            self.ifUseCache = False
 
     def saveClicked(self):
         text = six.text_type(self.regionNameField.toPlainText())
@@ -874,13 +883,20 @@ class RegionChooser(QtGui.QDialog):
         self.regionNameField.setPlainText(text)
         correct = False
         cache = Cache()
-        svg = cache.getFromCache("map_" + text, True)
-        if svg:
-            correct = True
-        else:
-            correct = False
+        if self.ifUseCache: # use local map
+            try:
+                with open(resourcePath("mapSVG/map_{0}.svg".format(text))) as _:
+                    correct = True
+            except Exception as e:
+                logging.error(e)
+                correct = False
+            if not correct:
+                QMessageBox.warning(self, u"No such region map file!",
+                                    u"I can't find a region map file called 'mapSVG/map_{0}.svg'".format(text))
+        elif not self.ifUseCache: # download from dotlan
             try:
                 url = dotlan.Map.DOTLAN_BASIC_URL.format(text)
+                logging.info("Check dotlan map resource")
                 content = requests.get(url, verify=False).text
                 if u"not found" in content:
                     correct = False
@@ -893,16 +909,17 @@ class RegionChooser(QtGui.QDialog):
                         correct = False
                     if not correct:
                         QMessageBox.warning(self, u"No such region!",
-                                            u"I can't find a region called '{0}'".format(text))
+                                                u"I can't find a region called '{0}'".format(text))
                 else:
                     correct = True
             except Exception as e:
                 QMessageBox.critical(self, u"Something went wrong!",
-                                     u"Error while testing existing '{0}'".format(str(e)))
+                                         u"Error while testing existing '{0}'".format(str(e)))
                 logging.error(e)
                 correct = False
         if correct:
             Cache().putIntoCache("region_name", text, 60 * 60 * 24 * 365)
+            Cache().putIntoCache("ifUseMapCache", self.ifUseCache)
             self.accept()
             self.emit(SIGNAL("new_region_chosen"))
 

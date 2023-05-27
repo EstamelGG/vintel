@@ -349,16 +349,12 @@
     <property name="title">
      <string>Region</string>
     </property>
-    <addaction name="catchRegionAction"/>
-    <addaction name="providenceRegionAction"/>
+    <addaction name="delveRegionAction"/>
+    <addaction name="fountainRegionAction"/>
     <addaction name="queriousRegionAction"/>
     <addaction name="separator"/>
-    <addaction name="providenceCatchRegionAction"/>
-    <addaction name="providenceCatchCompactRegionAction"/>
     <addaction name="chooseRegionAction"/>
     <addaction name="separator"/>
-    <addaction name="jumpbridgeDataAction"/>
-    <addaction name="refreshmapAction"/>
    </widget>
    <widget class="QMenu" name="menuWindow">
     <property name="title">
@@ -558,26 +554,26 @@
     <string>Transparency</string>
    </property>
   </action>
-  <action name="providenceRegionAction">
+  <action name="fountainRegionAction">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Providence</string>
+    <string>Fountain</string>
    </property>
    <property name="regionName" stdset="0">
-    <string>providence</string>
+    <string>fountain</string>
    </property>
   </action>
-  <action name="catchRegionAction">
+  <action name="delveRegionAction">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Catch</string>
+    <string>Delve</string>
    </property>
    <property name="regionName" stdset="0">
-    <string>catch</string>
+    <string>delve</string>
    </property>
   </action>
   <action name="providenceCatchRegionAction">
