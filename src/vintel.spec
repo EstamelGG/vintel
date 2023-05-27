@@ -1,11 +1,12 @@
 # -*- mode: python -*-
 import sys
 
-app_name = 'vintel-1.2.7.4'
+app_name = 'vintel-1.2.7.5'
 block_cipher = None
 
 a = Analysis(['vintel.py'],
-             pathex=['C:\\Users\\Administrator\\PycharmProjects\\vintel\\src' if sys.platform == 'win32' else '/Users/mark/code/vintel/src'],
+             #!!!should Edit Path!!!
+             pathex=['C:\\Users\\HP\\PycharmProjects\\vintel\\src' if sys.platform == 'win32' else '/Users/mark/code/vintel/src'],
              binaries=None,
              datas=None,
              hookspath=[],
@@ -111,8 +112,8 @@ exe = EXE(pyz,
           name=os.path.join('dist', app_name + ('.exe' if sys.platform == 'win32' else '')),
           debug=False,
           console=False,
-          # debug=True,
-          # console=True,
+          #debug=True,
+          #console=True,
           strip=False,
           icon='icon.ico',
           upx=False,
