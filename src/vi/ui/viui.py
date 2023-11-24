@@ -235,6 +235,8 @@ class MainWindow(QtGui.QMainWindow):
         if not regionName:
             regionName = "Delve"
         svg = None
+        if useLocalMap == None:
+            useLocalMap = 1
         if useLocalMap:
             try:
                 logging.info("Finding map file")

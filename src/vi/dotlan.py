@@ -27,6 +27,7 @@ import six
 import requests
 import logging
 import os
+from vi.resources import resourcePath
 
 requests.packages.urllib3.disable_warnings()
 from bs4 import BeautifulSoup
@@ -75,13 +76,21 @@ class Map(object):
         if not svgFile:
             logging.info("get cache from cachefile map_{0}".format(self.region))
             svg = cache.getFromCache("map_" + self.region)
+            if not self._svg_format_check(svg):
+                with open(resourcePath("mapSVG/map_{0}.svg".format(self.region))) as svgFile:
+                    svg = svgFile.read()
         else:
             svg = svgFile
         if not svg:
             try:
-                svg = self._getSvgFromDotlan(self.region)
+                svg, code = self._getSvgFromDotlan(self.region)
                 logging.info("put map cache into cachefile map_{0}".format(self.region))
-                cache.putIntoCache("map_" + self.region, svg, evegate.secondsTillDowntime() + 60 * 60)
+                if code == 200:
+                    cache.putIntoCache("map_" + self.region, svg, evegate.secondsTillDowntime() + 60 * 60)
+                else:
+                    with open(resourcePath("mapSVG/map_{0}.svg".format(self.region))) as svgFile:
+                        svg = svgFile.read()
+                        cache.putIntoCache("map_" + self.region, svg, evegate.secondsTillDowntime() + 60 * 60)
             except Exception as e:
                 self.outdatedCacheError = e
                 svg = cache.getFromCache("map_" + self.region, True)
@@ -133,8 +142,16 @@ class Map(object):
                 systems[name] = System(name, element, self.soup, mapCoordinates, transform, systemId)
         return systems
 
+    def _svg_format_check(self, svg):
+        soup = BeautifulSoup(svg, 'html.parser')
+        svgs = soup.select("svg")
+        if len(svgs) == 0:
+            return False
+        return True
+
     def _prepareSvg(self, soup, systems):
-        svg = soup.select("svg")[0]
+        svgs = soup.select("svg")
+        svg = svgs[0]
         # Disable dotlan mouse functionality and make all jump lines black
         svg["onmousedown"] = "return false;"
         for line in soup.select("line"):
@@ -196,8 +213,10 @@ class Map(object):
     def _getSvgFromDotlan(self, region):
         url = self.DOTLAN_BASIC_URL.format(region)
         logging.info("Downloading svg from {0}".format(self.DOTLAN_BASIC_URL.format(region)))
-        content = requests.get(url, verify=False).text
-        return content
+        req = requests.get(url, verify=False)
+        content = req.text
+        status_code = req.status_code
+        return content, status_code
 
     def addSystemStatistics(self, statistics):
         logging.info("addSystemStatistics start")

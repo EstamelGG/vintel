@@ -46,7 +46,7 @@ class ChatParser(object):
         """ path = the path with the logs
             rooms = the rooms to parse"""
         self.path = path  # the path with the chatlog
-        self.pathToGamelogs = pathToGamelogs  # the path with the chatlog
+        self.pathToGamelogs = pathToGamelogs  # the path with the chatlog, to get combat log
         self.rooms = rooms  # the rooms to watch (excl. local)
         self.high_values = high_values
         self.systems = systems  # the known systems as dict name: system
