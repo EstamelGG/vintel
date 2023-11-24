@@ -143,11 +143,13 @@ class Map(object):
         return systems
 
     def _svg_format_check(self, svg):
+        if svg == None:
+            return False
         soup = BeautifulSoup(svg, 'html.parser')
         svgs = soup.select("svg")
-        if len(svgs) == 0:
-            return False
-        return True
+        if len(svgs) >= 1:
+            return True
+        return False
 
     def _prepareSvg(self, soup, systems):
         svgs = soup.select("svg")
