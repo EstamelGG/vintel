@@ -21,6 +21,7 @@ Setup dev env:
 8. pip install -r requirements.txt
 9. pip install ./pyqt4_whl/PyQt4-4.11.4-cp27-cp27m-win32.whl
 10. run vintel.py
+11. pyinstaller vintel.spec vintel.py 
 
 # Welcome To Vintel
 
